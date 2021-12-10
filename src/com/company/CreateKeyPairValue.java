@@ -3,14 +3,9 @@ package com.company;
 import org.json.simple.JSONObject;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
-import picocli.CommandLine.Parameters;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Set;
-import java.util.concurrent.Callable;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -37,36 +32,46 @@ class CreateKeyPairValue implements Runnable {
     @Command(name = "getRules", mixinStandardHelpOptions = true, version = "getRules 1.0",
             description = "Gets the first Json file and Returns an array that has the list of the rules in them")
     public ArrayList<String> getRules() throws IOException {
-        String pathOfJsonArrayFileInstruction = "";
-        Object obj = new Object();
-        //Get the user to input the file path of the json file that has the rules for the k or v values.
-        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-        try {
-            //Getting the rules for the files.
-            JSONParser parser = new JSONParser();
-            System.out.println("Enter the name of the file containing the json array of strings in the format of k:<regex>\" OR \"v:<regex> ");
-            pathOfJsonArrayFileInstruction = reader.readLine();
-            //Read  the json file given from the path and parse as an object named object
-            obj = parser.parse(new FileReader(pathOfJsonArrayFileInstruction));
-            //System.out.println(obj.getClass().getName());
-            JSONArray instructionJsonArray = (JSONArray) obj;
-            instructionJsonArray.forEach(object -> {
-                //Place the instruction into the arraylist
-                rulesList.add((String) object);
-            });
-        } catch (Exception e) {
-            if (pathOfJsonArrayFileInstruction != null) {
-                System.out.println(e.toString());
+        boolean completeList = false;
+        do{
+            String pathOfJsonArrayFileInstruction = "";
+            Object obj = new Object();
+            File dataJsonFile = new File("");
+            //Get the user to input the file path of the json file that has the rules for the k or v values.
+            BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+            try {
+                //Getting the rules for the files.
+                JSONParser parser = new JSONParser();
                 System.out.println("Enter the name of the file containing the json array of strings in the format of k:<regex>\" OR \"v:<regex> ");
                 pathOfJsonArrayFileInstruction = reader.readLine();
+                dataJsonFile = new File(pathOfJsonArrayFileInstruction);
+                //Read  the json file given from the path and parse as an object named object
+                obj = parser.parse(new FileReader(dataJsonFile));
+                //System.out.println(obj.getClass().getName());
+                JSONArray instructionJsonArray = (JSONArray) obj;
+                Iterator iterator = instructionJsonArray.iterator();
+                while(iterator.hasNext()){
+                    rulesList.add((String) iterator.next());
+                    if(!iterator.hasNext()){
+                        completeList = true;
+                    }
+                }
+
+
+            } catch (Exception e) {
+                if (!dataJsonFile.exists()) {
+                    System.out.println(e.toString());
+                    System.out.println("Enter the name of the file containing the json array of strings in the format of k:<regex>\" OR \"v:<regex> ");
+                    pathOfJsonArrayFileInstruction = reader.readLine();
+                }
+                //If the the file does not contain a json array
+                if (!obj.getClass().getName().contains("Array")) {
+                    System.out.println(e.toString());
+                    System.out.println("Enter the name of the file containing the json array of strings in the format of k:<regex>\" OR \"v:<regex> ");
+                    pathOfJsonArrayFileInstruction = reader.readLine();
+                }
             }
-            //If the the file does not contain a json array
-            if (!obj.getClass().getName().contains("Array")) {
-                System.out.println(e.toString());
-                System.out.println("Enter the name of the file containing the json array of strings in the format of k:<regex>\" OR \"v:<regex> ");
-                pathOfJsonArrayFileInstruction = reader.readLine();
-            }
-        }
+        }while(!completeList);
         return rulesList;
     }
 
@@ -125,7 +130,8 @@ class CreateKeyPairValue implements Runnable {
     @Command(name = "CreateKeyValuePairArray", mixinStandardHelpOptions = true, version = "createKeyValuePairArray 1.0",
             description = "This method is to get the JSON Objects from the people.json file which has a Json Array Structure " +
                     "and create an arraylist of HashMaps containing the key value pair information")
-    public void createKeyValuePairArray() throws IOException {
+    public boolean createKeyValuePairArray() throws IOException {
+        boolean writtenFile = false;
         JSONArray peopleJsonArray = (JSONArray) obj;
         System.out.println(peopleJsonArray);
         JSONObject currentObject = new JSONObject();
@@ -162,14 +168,17 @@ class CreateKeyPairValue implements Runnable {
                 System.out.println("More key value pairs to go");
             }
         }
-        writeJSONFile(finalKeyValuePairObjects,pathOfJsonPeopleArrayFile);
-
+        if(writeJSONFile(finalKeyValuePairObjects,pathOfJsonPeopleArrayFile)){
+            writtenFile = true;
+        };
+    return writtenFile;
 
     }
 
     @Command(name="writeJSONFILE", mixinStandardHelpOptions = true, version = "writeJSONFile 1.0",
             description = "This command will finally write the starred JSON objects into the current file.")
-    public static void writeJSONFile(ArrayList<HashMap> starredJsonObjects, String filename) {
+    public static boolean writeJSONFile(ArrayList<HashMap> starredJsonObjects, String filename) {
+        boolean doneWriting = false;
         JSONArray starredJsonArray = new JSONArray();
         starredJsonObjects.forEach(object -> {
             starredJsonArray.add(object);
@@ -180,36 +189,48 @@ class CreateKeyPairValue implements Runnable {
             //We can write any JSONArray or JSONObject instance to the file
             file.write(starredJsonArray.toJSONString());
             file.flush();
+            doneWriting = true;
         } catch (IOException e) {
             e.printStackTrace();
         }
+        return doneWriting;
     }
 
 
     @Override
-    public void run() {
-        try {
-            rulesList = getRules();
-            boolean added = false;
-            BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-            System.out.println("Enter the name of the file containing the json files with the information of people:  ");
-            pathOfJsonPeopleArrayFile = reader.readLine();
-            JSONParser parser = new JSONParser();
-            obj = parser.parse(new FileReader(pathOfJsonPeopleArrayFile));
-            //System.out.println(obj.getClass().getName());
-            //Running the program if the file containg data is in a JSON Array structure.
-            if (obj.getClass().getName().contains("Array")) {
-              createKeyValuePairArray();
-                System.out.println("The final pairs are: "+ finalKeyValuePairObjects);
-            }else{
-                System.out.println("Not an array");
-            }
-        } catch (Exception e) {
-            e.toString();
-        }
-        System.out.println("Get rules list:" + rulesList);
-    }
+    public void run(){
+        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+        //boolean fileExist = false;
+        File dataJsonFile = new File("");
+        boolean finishedExecuting = false;
 
+            try {
+                rulesList = getRules();
+                do {
+                    System.out.println("Enter the name of the file containing the json files with the information of people:  ");
+                    pathOfJsonPeopleArrayFile = reader.readLine();
+                    dataJsonFile = new File(pathOfJsonPeopleArrayFile);
+
+                    if (!dataJsonFile.exists()) {
+
+                        System.out.println("The directory " + pathOfJsonPeopleArrayFile + " doesn't exist.");
+                    }else{
+                        JSONParser parser = new JSONParser();
+                        obj = parser.parse(new FileReader(dataJsonFile));
+                        if (obj.getClass().getName().contains("Array")) {
+                            if (createKeyValuePairArray()) {
+                                finishedExecuting = true;
+                            }
+                            System.out.println("The final pairs are: " + finalKeyValuePairObjects);
+                        } else {
+                            System.out.println("Not an array");
+                        }
+                    }
+
+                } while (!finishedExecuting);
+            }  catch (Exception e) {
+            }
+        }
     public static void main(String[] args) {
         // write your code here
         int exitCode = new CommandLine(new CreateKeyPairValue()).execute(args);
