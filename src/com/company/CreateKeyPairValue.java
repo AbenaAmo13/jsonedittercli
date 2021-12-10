@@ -183,7 +183,6 @@ class CreateKeyPairValue implements Runnable {
     @Command(name="writeJSONFILE", mixinStandardHelpOptions = true, version = "writeJSONFile 1.0",
             description = "This command will finally write the starred JSON objects into the current file.")
     public static boolean writeJSONFile(ArrayList<HashMap> starredJsonObjects, String filename) throws IOException {
-
         File updatedFile = new File("");
         boolean isFileUnique = false;
         do {
