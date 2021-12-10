@@ -3,6 +3,7 @@ package com.company;
 import org.json.simple.JSONObject;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
 
 import java.io.*;
 import java.util.*;
@@ -17,7 +18,11 @@ import org.json.simple.parser.JSONParser;
 @Command(name = "CreateKeyValuePair", mixinStandardHelpOptions = true, version = "getRules 1.0",
         description = "This method is to get the JSON Objects from the people.json file or similar file\n" +
                 "    and create an arraylist of HashMaps containing the key value pair information")
+
 class CreateKeyPairValue implements Runnable {
+    @Option(names = {"-s", "-start"}, description = "press ")
+    boolean start;
+
     private ArrayList<String> rulesList = new ArrayList<>();
     public ArrayList<String> getRulesList() {
         return rulesList;
@@ -177,7 +182,26 @@ class CreateKeyPairValue implements Runnable {
 
     @Command(name="writeJSONFILE", mixinStandardHelpOptions = true, version = "writeJSONFile 1.0",
             description = "This command will finally write the starred JSON objects into the current file.")
-    public static boolean writeJSONFile(ArrayList<HashMap> starredJsonObjects, String filename) {
+    public static boolean writeJSONFile(ArrayList<HashMap> starredJsonObjects, String filename) throws IOException {
+
+        File updatedFile = new File("");
+        boolean isFileUnique = false;
+        do {
+            System.out.println("Enter the name of the new file that will contain the updated json data file:");
+            BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+            String newFileName = reader.readLine();
+            int count = 1;
+            updatedFile = new File(newFileName);
+
+            if (updatedFile.exists()) {
+                System.out.println("Your file name already exists, please type a new file name");
+            }else{
+                updatedFile = new File(newFileName + ".json");
+                updatedFile.createNewFile();
+                isFileUnique= true;
+            }
+        }while(!isFileUnique);
+
         boolean doneWriting = false;
         JSONArray starredJsonArray = new JSONArray();
         starredJsonObjects.forEach(object -> {
@@ -185,7 +209,7 @@ class CreateKeyPairValue implements Runnable {
         });
         System.out.println(starredJsonArray);
         //Write JSON file
-        try (FileWriter file = new FileWriter(filename)) {
+        try (FileWriter file = new FileWriter(updatedFile)) {
             //We can write any JSONArray or JSONObject instance to the file
             file.write(starredJsonArray.toJSONString());
             file.flush();
@@ -197,13 +221,14 @@ class CreateKeyPairValue implements Runnable {
     }
 
 
+
+
     @Override
     public void run(){
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
         //boolean fileExist = false;
         File dataJsonFile = new File("");
         boolean finishedExecuting = false;
-
             try {
                 rulesList = getRules();
                 do {
